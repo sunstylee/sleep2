@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>眠りの記録</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12132b">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night-900:#12132b;
+    --night-800:#1a1c3d;
+    --night-700:#262a5c;
+    --night-600:#343a7a;
+    --moon-100:#f5f3ff;
+    --moon-200:#e4e1fb;
+    --dawn-300:#f7c08a;
+    --dawn-400:#f2a65a;
+    --dawn-500:#e88a3a;
+    --star:#ffd873;
+    --text-dim:#9497c9;
+    --text-dimmer:#6b6ea0;
+    --danger:#f0745e;
+    --radius-lg:28px;
+    --radius-md:18px;
+    --radius-sm:12px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; height:100%;}
+  body{
+    background:radial-gradient(120% 100% at 50% -10%, var(--night-700) 0%, var(--night-900) 55%);
+    font-family:"Noto Sans JP", sans-serif;
+    color:var(--moon-100);
+    display:flex;
+    justify-content:center;
+    min-height:100vh;
+  }
+  .display{font-family:"Zen Maru Gothic", sans-serif;}
+
+  #app{
+    width:100%;
+    max-width:430px;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+    background:transparent;
+  }
+
+  /* Stars decoration */
+  .stars{
+    position:fixed;
+    inset:0;
+    max-width:430px;
+    margin:0 auto;
+    pointer-events:none;
+    z-index:0;
+    overflow:hidden;
+  }
+  .stars span{
+    position:absolute;
+    width:2px; height:2px;
+    background:var(--star);
+    border-radius:50%;
+    opacity:.5;
+  }
+
+  header.top{
+    padding:28px 24px 12px;
+    position:relative;
+    z-index:1;
+  }
+  header.top .eyebrow{
+    font-size:12px;
+    letter-spacing:.12em;
+    color:var(--text-dim);
+    font-weight:500;
+  }
+  header.top h1{
+    font-family:"Zen Maru Gothic", sans-serif;
+    font-size:26px;
+    font-weight:700;
+    margin:4px 0 0;
+    color:var(--moon-100);
+  }
+
+  main{
+    flex:1;
+    padding:8px 20px 110px;
+    position:relative;
+    z-index:1;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+
+  /* User selector chips */
+  .user-row{
+    display:flex;
+    gap:10px;
+    overflow-x:auto;
+    padding:4px 4px 8px;
+    scrollbar-width:none;
+  }
+  .user-row::-webkit-scrollbar{display:none;}
+  .user-chip{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:9px 16px 9px 10px;
+    background:var(--night-800);
+    border:1.5px solid var(--night-600);
+    border-radius:999px;
+    cursor:pointer;
+    transition:border-color .2s, background .2s, transform .15s;
+    font-size:14px;
+    font-weight:500;
+    color:var(--text-dim);
+  }
+  .user-chip .dot{
+    width:22px; height:22px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px;
+    font-weight:700;
+    color:var(--night-900);
+    font-family:"Zen Maru Gothic", sans-serif;
+  }
+  .user-chip.active{
+    border-color:var(--dawn-400);
+    background:var(--night-700);
+    color:var(--moon-100);
+    transform:translateY(-1px);
+  }
+
+  /* Signature arc card */
+  .arc-card{
+    background:linear-gradient(180deg, var(--night-800) 0%, var(--night-900) 100%);
+    border:1px solid var(--night-600);
+    border-radius:var(--radius-lg);
+    padding:26px 22px 22px;
+    position:relative;
+    overflow:hidden;
+  }
+  .arc-card .status-label{
+    font-size:12px;
+    color:var(--text-dim);
+    letter-spacing:.08em;
+    margin-bottom:2px;
+  }
+  .arc-card .status-value{
+    font-family:"Zen Maru Gothic", sans-serif;
+    font-size:22px;
+    font-weight:700;
+    margin-bottom:18px;
+  }
+  .arc-wrap{
+    position:relative;
+    width:100%;
+    height:150px;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+  }
+  svg.arc-svg{ width:100%; height:100%; overflow:visible; }
+  .arc-center-text{
+    position:absolute;
+    bottom:6px; left:0; right:0;
+    text-align:center;
+  }
+  .arc-center-text .dur{
+    font-family:"Zen Maru Gothic", sans-serif;
+    font-size:32px;
+    font-weight:900;
+    color:var(--moon-100);
+  }
+  .arc-center-text .dur .unit{
+    font-size:15px;
+    font-weight:500;
+    color:var(--text-dim);
+    margin:0 2px 0 1px;
+  }
+  .arc-times{
+    display:flex;
+    justify-content:space-between;
+    margin-top:8px;
+    font-size:13px;
+    color:var(--text-dim);
+  }
+  .arc-times b{ color:var(--moon-100); font-weight:600; }
+
+  .main-btn{
+    margin-top:20px;
+    width:100%;
+    border:none;
+    border-radius:999px;
+    padding:17px 0;
+    font-family:"Zen Maru Gothic", sans-serif;
+    font-size:17px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    cursor:pointer;
+    transition:transform .12s, filter .15s;
+  }
+  .main-btn:active{ transform:scale(.97); }
+  .main-btn.bed{
+    background:linear-gradient(135deg, #4b4fa0, #262a5c);
+    color:var(--moon-100);
+    box-shadow:0 8px 24px -8px rgba(75,79,160,.6);
+  }
+  .main-btn.wake{
+    background:linear-gradient(135deg, var(--dawn-300), var(--dawn-500));
+    color:#3b1f04;
+    box-shadow:0 8px 24px -8px rgba(232,138,58,.55);
+  }
+
+  .section-title{
+    font-family:"Zen Maru Gothic", sans-serif;
+    font-size:15px;
+    font-weight:700;
+    color:var(--moon-100);
+    margin:6px 2px 0;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .section-title span.hint{
+    font-size:12px;
+    font-weight:400;
+    color:var(--text-dimmer);
+  }
+
+  /* History list */
+  .history-list{ display:flex; flex-direction:column; gap:10px; }
+  .history-empty{
+    text-align:center;
+    padding:40px 20px;
+    color:var(--text-dimmer);
+    font-size:13px;
+    background:var(--night-800);
+    border:1px dashed var(--night-600);
+    border-radius:var(--radius-md);
+  }
+  .history-card{
+    background:var(--night-800);
+    border:1px solid var(--night-600);
+    border-radius:var(--radius-md);
+    padding:14px 16px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+  .history-card .date-badge{
+    flex:0 0 auto;
+    width:52px;
+    text-align:center;
+  }
+  .history-card .date-badge .dow{
+    font-size:11px;
+    color:var(--text-dimmer);
+  }
+  .history-card .date-badge .dnum{
+    font-family:"Zen Maru Gothic", sans-serif;
+    font-size:20px;
+    font-weight:700;
+    color:var(--moon-100);
+  }
+  .history-card .mid{ flex:1; min-width:0; }
+  .history-card .times{
+    font-size:13px;
+    color:var(--text-dim);
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .history-card .times b{ color:var(--moon-100); font-weight:600; }
+  .history-card .bar{
+    margin-top:8px;
+    height:6px;
+    border-radius:999px;
+    background:var(--night-700);
+    overflow:hidden;
+  }
+  .history-card .bar-fill{
+    height:100%;
+    border-radius:999px;
+    background:linear-gradient(90deg, #4b4fa0, var(--dawn-400));
+  }
+  .history-card .dur-col{
+    flex:0 0 auto;
+    text-align:right;
+  }
+  .history-card .dur-col .dv{
+    font-family:"Zen Maru Gothic", sans-serif;
+    font-size:17px;
+    font-weight:700;
+    color:var(--moon-100);
+  }
+  .history-card .dur-col .dl{
+    font-size:10px;
+    color:var(--text-dimmer);
+  }
+
+  /* Admin */
+  .admin-list{ display:flex; flex-direction:column; gap:10px; }
+  .admin-card{
+    background:var(--night-800);
+    border:1px solid var(--night-600);
+    border-radius:var(--radius-md);
+    padding:12px 14px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .admin-card .dot{
+    width:38px; height:38px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:"Zen Maru Gothic", sans-serif;
+    font-weight:700;
+    font-size:15px;
+    color:var(--night-900);
+    flex:0 0 auto;
+  }
+  .admin-card input{
+    flex:1;
+    background:transparent;
+    border:none;
+    color:var(--moon-100);
+    font-family:"Noto Sans JP", sans-serif;
+    font-size:15px;
+    font-weight:500;
+    outline:none;
+    border-bottom:1px solid transparent;
+    padding:4px 0;
+  }
+  .admin-card input:focus{ border-bottom:1px solid var(--dawn-400); }
+  .admin-card .del-btn{
+    flex:0 0 auto;
+    width:32px;height:32px;
+    border-radius:50%;
+    border:none;
+    background:var(--night-700);
+    color:var(--text-dim);
+    font-size:15px;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .admin-card .del-btn:active{ background:var(--danger); color:#fff; }
+
+  .add-user-btn{
+    width:100%;
+    padding:15px 0;
+    border-radius:var(--radius-md);
+    border:1.5px dashed var(--night-600);
+    background:transparent;
+    color:var(--text-dim);
+    font-family:"Zen Maru Gothic", sans-serif;
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+  }
+  .add-user-btn:disabled{ opacity:.4; }
+  .cap-note{
+    text-align:center;
+    font-size:12px;
+    color:var(--text-dimmer);
+    margin-top:-4px;
+  }
+
+  /* Color picker for new user */
+  .color-picker{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin:6px 2px 0;
+  }
+  .swatch{
+    width:30px; height:30px;
+    border-radius:50%;
+    cursor:pointer;
+    border:2px solid transparent;
+  }
+  .swatch.sel{ border-color:var(--moon-100); }
+
+  .modal-backdrop{
+    position:fixed; inset:0;
+    background:rgba(10,10,25,.55);
+    backdrop-filter:blur(2px);
+    display:flex; align-items:flex-end; justify-content:center;
+    z-index:20;
+  }
+  .modal-sheet{
+    width:100%; max-width:430px;
+    background:var(--night-800);
+    border:1px solid var(--night-600);
+    border-radius:24px 24px 0 0;
+    padding:22px 22px 28px;
+  }
+  .modal-sheet h3{
+    font-family:"Zen Maru Gothic", sans-serif;
+    margin:0 0 14px;
+    font-size:17px;
+  }
+  .modal-sheet input[type=text]{
+    width:100%;
+    background:var(--night-900);
+    border:1px solid var(--night-600);
+    border-radius:var(--radius-sm);
+    padding:12px 14px;
+    color:var(--moon-100);
+    font-size:15px;
+    outline:none;
+    font-family:"Noto Sans JP", sans-serif;
+    margin-bottom:14px;
+  }
+  .modal-actions{ display:flex; gap:10px; margin-top:6px; }
+  .modal-actions button{
+    flex:1;
+    padding:13px 0;
+    border-radius:999px;
+    border:none;
+    font-family:"Zen Maru Gothic", sans-serif;
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+  }
+  .modal-actions .cancel{ background:var(--night-700); color:var(--text-dim); }
+  .modal-actions .confirm{ background:var(--dawn-400); color:#3b1f04; }
+  .modal-actions .confirm:disabled{ opacity:.4; }
+
+  /* Bottom nav */
+  nav.bottom{
+    position:fixed;
+    bottom:0; left:0; right:0;
+    max-width:430px;
+    margin:0 auto;
+    background:rgba(18,19,43,.85);
+    backdrop-filter:blur(14px);
+    border-top:1px solid var(--night-700);
+    display:flex;
+    padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+    z-index:15;
+  }
+  nav.bottom button{
+    flex:1;
+    background:none;
+    border:none;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    padding:6px 0;
+    color:var(--text-dimmer);
+    font-family:"Noto Sans JP", sans-serif;
+    font-size:11px;
+    cursor:pointer;
+  }
+  nav.bottom button .icon{ font-size:20px; line-height:1; }
+  nav.bottom button.active{ color:var(--dawn-400); }
+
+  .toast{
+    position:fixed;
+    bottom:96px; left:50%;
+    transform:translateX(-50%);
+    background:var(--moon-100);
+    color:var(--night-900);
+    padding:10px 18px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:600;
+    box-shadow:0 8px 20px rgba(0,0,0,.3);
+    z-index:30;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s, transform .25s;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(-4px); }
+
+  .empty-state{
+    text-align:center;
+    padding:60px 24px;
+    color:var(--text-dim);
+  }
+  .empty-state .icon{ font-size:40px; margin-bottom:10px; }
+  .empty-state h3{ font-family:"Zen Maru Gothic",sans-serif; color:var(--moon-100); margin:0 0 6px; }
+  .empty-state p{ font-size:13px; margin:0; color:var(--text-dimmer); }
+</style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+<div id="app">
+  <header class="top">
+    <div class="eyebrow" id="dateLabel">――</div>
+    <h1 id="pageTitle">記録</h1>
+  </header>
+  <main id="main"></main>
+  <nav class="bottom">
+    <button data-tab="record" class="active"><span class="icon">🌙</span>記録</button>
+    <button data-tab="history"><span class="icon">📖</span>履歴</button>
+    <button data-tab="admin"><span class="icon">⚙️</span>管理</button>
+  </nav>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  const PALETTE = ["#f2a65a","#8f9bff","#7ed6a5","#f0745e","#ffd873","#c792ea"];
+  const MAX_USERS = 5;
+  const STORAGE_KEY = "sleep-tracker-data";
+
+  let state = {
+    users: [],
+    sessions: [], // {id, userId, bedAt (iso), wakeAt (iso|null)}
+    activeUserId: null
+  };
+  let tab = "record";
+  let loaded = false;
+
+  const $main = document.getElementById("main");
+  const $pageTitle = document.getElementById("pageTitle");
+  const $dateLabel = document.getElementById("dateLabel");
+  const $toast = document.getElementById("toast");
+
+  function uid(){ return Math.random().toString(36).slice(2,9) + Date.now().toString(36); }
+
+  function showToast(msg){
+    $toast.textContent = msg;
+    $toast.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=> $toast.classList.remove("show"), 1800);
+  }
+
+  async function loadState(){
+    try{
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        state = Object.assign(state, parsed);
+      }
+    }catch(e){
+      // no existing data yet, or storage unavailable
+    }
+    if(!state.users || state.users.length === 0){
+      state.users = [
+        {id: uid(), name:"わたし", color: PALETTE[0]}
+      ];
+    }
+    if(!state.activeUserId || !state.users.find(u=>u.id===state.activeUserId)){
+      state.activeUserId = state.users[0].id;
+    }
+    if(!state.sessions) state.sessions = [];
+    loaded = true;
+    render();
+  }
+
+  async function saveState(){
+    try{
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        users: state.users, sessions: state.sessions, activeUserId: state.activeUserId
+      }));
+    }catch(e){
+      showToast("保存に失敗しました");
+    }
+  }
+
+  function initials(name){
+    return (name||"?").trim().slice(0,1);
+  }
+
+  function fmtTime(iso){
+    const d = new Date(iso);
+    return d.getHours().toString().padStart(2,"0") + ":" + d.getMinutes().toString().padStart(2,"0");
+  }
+  function fmtDur(ms){
+    const totalMin = Math.max(0, Math.round(ms/60000));
+    const h = Math.floor(totalMin/60), m = totalMin%60;
+    return {h, m};
+  }
+  function fmtDate(iso){
+    const d = new Date(iso);
+    const dow = ["日","月","火","水","木","金","土"][d.getDay()];
+    return {month: d.getMonth()+1, day: d.getDate(), dow};
+  }
+
+  function updateHeaderDate(){
+    const now = new Date();
+    const dow = ["日","月","火","水","木","金","土"][now.getDay()];
+    $dateLabel.textContent = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日（${dow}）`;
+  }
+
+  function getOpenSession(userId){
+    return state.sessions.find(s => s.userId === userId && !s.wakeAt) || null;
+  }
+
+  function userSessions(userId){
+    return state.sessions
+      .filter(s => s.userId === userId && s.wakeAt)
+      .sort((a,b)=> new Date(b.bedAt) - new Date(a.bedAt));
+  }
+
+  /* ---------- Rendering ---------- */
+
+  function render(){
+    if(!loaded) return;
+    updateHeaderDate();
+    document.querySelectorAll("nav.bottom button").forEach(b=>{
+      b.classList.toggle("active", b.dataset.tab === tab);
+    });
+    if(tab === "record"){ $pageTitle.textContent = "記録"; renderRecord(); }
+    else if(tab === "history"){ $pageTitle.textContent = "履歴"; renderHistory(); }
+    else { $pageTitle.textContent = "管理"; renderAdmin(); }
+  }
+
+  function userChipsHtml(){
+    return `<div class="user-row" id="userRow">` +
+      state.users.map(u => `
+        <div class="user-chip ${u.id===state.activeUserId?'active':''}" data-uid="${u.id}">
+          <span class="dot" style="background:${u.color}">${initials(u.name)}</span>
+          ${escapeHtml(u.name)}
+        </div>
+      `).join("") +
+      `</div>`;
+  }
+
+  function escapeHtml(s){
+    return (s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  function renderRecord(){
+    const activeUser = state.users.find(u=>u.id===state.activeUserId);
+    const open = activeUser ? getOpenSession(activeUser.id) : null;
+    const last = activeUser && !open ? userSessions(activeUser.id)[0] : null;
+
+    let arcInner, statusLabel, statusValue, timesRow, btnHtml;
+
+    if(open){
+      statusLabel = "就寝中";
+      statusValue = (activeUser.name) + "さんは眠っています";
+      const elapsedMs = Date.now() - new Date(open.bedAt).getTime();
+      const {h,m} = fmtDur(elapsedMs);
+      arcInner = `<div class="dur">${h}<span class="unit">時間</span>${m}<span class="unit">分</span></div><div style="font-size:11px;color:var(--text-dimmer);margin-top:2px;">経過時間</div>`;
+      timesRow = `<div class="arc-times"><span>就寝 <b>${fmtTime(open.bedAt)}</b></span><span>起床 --:--</span></div>`;
+      btnHtml = `<button class="main-btn wake" id="mainActionBtn">☀️ 起きた</button>`;
+    } else if(last){
+      statusLabel = "前回の睡眠";
+      statusValue = fmtDate(last.bedAt).month + "月" + fmtDate(last.bedAt).day + "日の記録";
+      const durMs = new Date(last.wakeAt) - new Date(last.bedAt);
+      const {h,m} = fmtDur(durMs);
+      arcInner = `<div class="dur">${h}<span class="unit">時間</span>${m}<span class="unit">分</span></div><div style="font-size:11px;color:var(--text-dimmer);margin-top:2px;">合計睡眠時間</div>`;
+      timesRow = `<div class="arc-times"><span>就寝 <b>${fmtTime(last.bedAt)}</b></span><span>起床 <b>${fmtTime(last.wakeAt)}</b></span></div>`;
+      btnHtml = `<button class="main-btn bed" id="mainActionBtn">🌙 寝る</button>`;
+    } else {
+      statusLabel = "はじめての記録";
+      statusValue = activeUser ? activeUser.name + "さん、おやすみの記録をつけましょう" : "ユーザーを選んでください";
+      arcInner = `<div style="font-size:34px;">🌙</div>`;
+      timesRow = `<div class="arc-times"><span>まだ記録がありません</span></div>`;
+      btnHtml = `<button class="main-btn bed" id="mainActionBtn" ${activeUser? "":"disabled"}>🌙 寝る</button>`;
+    }
+
+    $main.innerHTML = `
+      ${userChipsHtml()}
+      <div class="arc-card">
+        <div class="status-label">${statusLabel}</div>
+        <div class="status-value">${escapeHtml(statusValue)}</div>
+        <div class="arc-wrap">
+          <div class="arc-center-text">${arcInner}</div>
+        </div>
+        ${timesRow}
+        ${btnHtml}
+      </div>
+    `;
+
+    document.querySelectorAll("#userRow .user-chip").forEach(chip=>{
+      chip.addEventListener("click", ()=>{
+        state.activeUserId = chip.dataset.uid;
+        saveState();
+        render();
+      });
+    });
+
+    const actionBtn = document.getElementById("mainActionBtn");
+    if(actionBtn){
+      actionBtn.addEventListener("click", ()=>{
+        const u = state.users.find(x=>x.id===state.activeUserId);
+        if(!u) return;
+        const openS = getOpenSession(u.id);
+        if(openS){
+          openS.wakeAt = new Date().toISOString();
+          showToast("おはようございます！記録しました");
+        } else {
+          state.sessions.push({id: uid(), userId: u.id, bedAt: new Date().toISOString(), wakeAt: null});
+          showToast("おやすみなさい。記録しました");
+        }
+        saveState();
+        render();
+      });
+    }
+
+    if(open && !renderRecord._timer){
+      renderRecord._timer = setInterval(()=>{ if(tab==="record") render(); }, 60000);
+    }
+  }
+
+  function renderHistory(){
+    const activeUser = state.users.find(u=>u.id===state.activeUserId);
+    const sessions = activeUser ? userSessions(activeUser.id) : [];
+
+    let listHtml;
+    if(sessions.length === 0){
+      listHtml = `<div class="history-empty">まだ睡眠の記録がありません。<br>「記録」タブから寝る時間を記録しましょう。</div>`;
+    } else {
+      const maxDur = Math.max(...sessions.map(s => new Date(s.wakeAt)-new Date(s.bedAt)), 1);
+      listHtml = sessions.map(s=>{
+        const d = fmtDate(s.bedAt);
+        const durMs = new Date(s.wakeAt)-new Date(s.bedAt);
+        const {h,m} = fmtDur(durMs);
+        const pct = Math.round((durMs/maxDur)*100);
+        return `
+          <div class="history-card">
+            <div class="date-badge">
+              <div class="dow">${d.dow}曜</div>
+              <div class="dnum">${d.month}/${d.day}</div>
+            </div>
+            <div class="mid">
+              <div class="times"><span>🌙</span><b>${fmtTime(s.bedAt)}</b><span style="color:var(--text-dimmer)">→</span><span>☀️</span><b>${fmtTime(s.wakeAt)}</b></div>
+              <div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>
+            </div>
+            <div class="dur-col">
+              <div class="dv">${h}<span style="font-size:11px;font-weight:500;">h</span>${m}<span style="font-size:11px;font-weight:500;">m</span></div>
+              <div class="dl">睡眠時間</div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    $main.innerHTML = `
+      ${userChipsHtml()}
+      <div class="section-title">${activeUser ? escapeHtml(activeUser.name) + "さんの記録" : "記録"} <span class="hint">${sessions.length}件</span></div>
+      <div class="history-list">${listHtml}</div>
+    `;
+
+    document.querySelectorAll("#userRow .user-chip").forEach(chip=>{
+      chip.addEventListener("click", ()=>{
+        state.activeUserId = chip.dataset.uid;
+        saveState();
+        render();
+      });
+    });
+  }
+
+  function renderAdmin(){
+    const canAdd = state.users.length < MAX_USERS;
+    $main.innerHTML = `
+      <div class="section-title">ユーザー <span class="hint">${state.users.length} / ${MAX_USERS}人</span></div>
+      <div class="admin-list" id="adminList">
+        ${state.users.map(u => `
+          <div class="admin-card" data-uid="${u.id}">
+            <div class="dot" style="background:${u.color}">${initials(u.name)}</div>
+            <input type="text" value="${escapeHtml(u.name)}" maxlength="10" data-uid="${u.id}" />
+            <button class="del-btn" data-del="${u.id}">✕</button>
+          </div>
+        `).join("")}
+      </div>
+      <button class="add-user-btn" id="addUserBtn" ${canAdd? "" : "disabled"}>＋ ユーザーを追加</button>
+      ${canAdd? "" : `<div class="cap-note">ユーザーは最大${MAX_USERS}人までです</div>`}
+    `;
+
+    document.querySelectorAll('#adminList input[type=text]').forEach(inp=>{
+      inp.addEventListener("change", ()=>{
+        const u = state.users.find(x=>x.id===inp.dataset.uid);
+        if(u){
+          const v = inp.value.trim();
+          u.name = v || u.name;
+          inp.value = u.name;
+          saveState();
+          showToast("名前を変更しました");
+          render();
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-del]').forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        if(state.users.length <= 1){
+          showToast("最後の1人は削除できません");
+          return;
+        }
+        confirmModal(
+          "ユーザーを削除しますか？",
+          "この操作は取り消せません。記録も削除されます。",
+          ()=>{
+            const id = btn.dataset.del;
+            state.users = state.users.filter(u=>u.id!==id);
+            state.sessions = state.sessions.filter(s=>s.userId!==id);
+            if(state.activeUserId===id) state.activeUserId = state.users[0].id;
+            saveState();
+            showToast("削除しました");
+            render();
+          }
+        );
+      });
+    });
+
+    const addBtn = document.getElementById("addUserBtn");
+    if(addBtn && canAdd){
+      addBtn.addEventListener("click", openAddUserModal);
+    }
+  }
+
+  /* ---------- Modals ---------- */
+
+  function confirmModal(title, desc, onConfirm){
+    const wrap = document.createElement("div");
+    wrap.className = "modal-backdrop";
+    wrap.innerHTML = `
+      <div class="modal-sheet">
+        <h3>${title}</h3>
+        <p style="font-size:13px;color:var(--text-dim);margin:-6px 0 16px;">${desc}</p>
+        <div class="modal-actions">
+          <button class="cancel">キャンセル</button>
+          <button class="confirm" style="background:var(--danger);color:#fff;">削除する</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(wrap);
+    wrap.querySelector(".cancel").onclick = ()=> wrap.remove();
+    wrap.querySelector(".confirm").onclick = ()=>{ onConfirm(); wrap.remove(); };
+    wrap.addEventListener("click", (e)=>{ if(e.target===wrap) wrap.remove(); });
+  }
+
+  function openAddUserModal(){
+    let chosenColor = PALETTE.find(c => !state.users.some(u=>u.color===c)) || PALETTE[0];
+    const wrap = document.createElement("div");
+    wrap.className = "modal-backdrop";
+    wrap.innerHTML = `
+      <div class="modal-sheet">
+        <h3>ユーザーを追加</h3>
+        <input type="text" id="newUserName" placeholder="名前を入力（例：おとうさん）" maxlength="10" />
+        <div class="color-picker" id="colorPicker">
+          ${PALETTE.map(c=>`<div class="swatch ${c===chosenColor?'sel':''}" data-color="${c}" style="background:${c}"></div>`).join("")}
+        </div>
+        <div class="modal-actions">
+          <button class="cancel">キャンセル</button>
+          <button class="confirm" id="confirmAdd" disabled>追加する</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(wrap);
+    const nameInput = wrap.querySelector("#newUserName");
+    const confirmBtn = wrap.querySelector("#confirmAdd");
+    nameInput.addEventListener("input", ()=>{
+      confirmBtn.disabled = nameInput.value.trim().length === 0;
+    });
+    wrap.querySelectorAll(".swatch").forEach(sw=>{
+      sw.addEventListener("click", ()=>{
+        wrap.querySelectorAll(".swatch").forEach(s=>s.classList.remove("sel"));
+        sw.classList.add("sel");
+        chosenColor = sw.dataset.color;
+      });
+    });
+    wrap.querySelector(".cancel").onclick = ()=> wrap.remove();
+    confirmBtn.onclick = ()=>{
+      const name = nameInput.value.trim();
+      if(!name) return;
+      if(state.users.length >= MAX_USERS) return;
+      const newUser = {id: uid(), name, color: chosenColor};
+      state.users.push(newUser);
+      state.activeUserId = newUser.id;
+      saveState();
+      wrap.remove();
+      showToast(name + "さんを追加しました");
+      render();
+    };
+    setTimeout(()=> nameInput.focus(), 100);
+  }
+
+  /* ---------- Nav ---------- */
+
+  document.querySelectorAll("nav.bottom button").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      tab = btn.dataset.tab;
+      render();
+    });
+  });
+
+  /* ---------- Stars background ---------- */
+  (function makeStars(){
+    const wrap = document.getElementById("stars");
+    for(let i=0;i<40;i++){
+      const s = document.createElement("span");
+      s.style.left = Math.random()*100 + "%";
+      s.style.top = Math.random()*70 + "%";
+      s.style.opacity = (Math.random()*.5+.15).toFixed(2);
+      const size = (Math.random()*1.6+1).toFixed(1);
+      s.style.width = size+"px"; s.style.height = size+"px";
+      wrap.appendChild(s);
+    }
+  })();
+
+  loadState();
+
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", ()=>{
+      navigator.serviceWorker.register("sw.js").catch(()=>{});
+    });
+  }
+})();
+</script>
+</body>
+</html>
