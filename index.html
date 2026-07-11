@@ -358,6 +358,20 @@
     font-size:15px;
     color:var(--night-900);
     flex:0 0 auto;
+    position:relative;
+    cursor:pointer;
+  }
+  .admin-card .dot::after{
+    content:"✎";
+    position:absolute;
+    bottom:-3px; right:-3px;
+    width:16px; height:16px;
+    border-radius:50%;
+    background:var(--night-700);
+    border:1.5px solid var(--night-800);
+    color:var(--moon-100);
+    font-size:9px;
+    display:flex; align-items:center; justify-content:center;
   }
   .admin-card input{
     flex:1;
@@ -501,6 +515,7 @@
     display:flex;
     gap:8px;
     flex-wrap:wrap;
+    align-items:center;
     margin:6px 2px 0;
   }
   .swatch{
@@ -510,6 +525,35 @@
     border:2px solid transparent;
   }
   .swatch.sel{ border-color:var(--moon-100); }
+
+  .custom-color-input{
+    width:30px; height:30px;
+    padding:0;
+    border:2px solid var(--night-600);
+    border-radius:50%;
+    cursor:pointer;
+    background:var(--night-900);
+    overflow:hidden;
+  }
+  .custom-color-input.sel{ border-color:var(--moon-100); }
+  .custom-color-input::-webkit-color-swatch-wrapper{ padding:0; border-radius:50%; }
+  .custom-color-input::-webkit-color-swatch{ border:none; border-radius:50%; }
+  .custom-color-input::-moz-color-swatch{ border:none; border-radius:50%; }
+
+  .color-picker-label{
+    font-size:11px;
+    color:var(--text-dimmer);
+    width:100%;
+    margin:2px 0 -2px;
+  }
+
+  .hidden-color-input{
+    position:absolute;
+    width:1px; height:1px;
+    opacity:0;
+    overflow:hidden;
+    pointer-events:none;
+  }
 
   .modal-backdrop{
     position:fixed; inset:0;
@@ -1051,7 +1095,8 @@
       <div class="admin-list" id="adminList">
         ${state.users.map(u => `
           <div class="admin-card" data-uid="${u.id}">
-            <div class="dot" style="background:${u.color}">${initials(u.name)}</div>
+            <label class="dot" for="colorInput-${u.id}" style="background:${u.color}">${initials(u.name)}</label>
+            <input type="color" id="colorInput-${u.id}" class="hidden-color-input" data-color-uid="${u.id}" value="${u.color}">
             <input type="text" value="${escapeHtml(u.name)}" maxlength="10" data-uid="${u.id}" />
             <button class="del-btn" data-del="${u.id}">✕</button>
           </div>
@@ -1085,6 +1130,22 @@
           showToast("名前を変更しました");
           render();
         }
+      });
+    });
+
+    document.querySelectorAll('#adminList input[type=color]').forEach(inp=>{
+      inp.addEventListener("input", ()=>{
+        const u = state.users.find(x=>x.id===inp.dataset.colorUid);
+        if(u){
+          u.color = inp.value;
+          const card = inp.closest(".admin-card");
+          if(card) card.querySelector(".dot").style.background = inp.value;
+        }
+      });
+      inp.addEventListener("change", ()=>{
+        saveState();
+        showToast("色を変更しました");
+        render();
       });
     });
 
@@ -1178,8 +1239,10 @@
       <div class="modal-sheet">
         <h3>ユーザーを追加</h3>
         <input type="text" id="newUserName" placeholder="名前を入力（例：おとうさん）" maxlength="10" />
+        <div class="color-picker-label">アイコンの色</div>
         <div class="color-picker" id="colorPicker">
           ${PALETTE.map(c=>`<div class="swatch ${c===chosenColor?'sel':''}" data-color="${c}" style="background:${c}"></div>`).join("")}
+          <input type="color" class="custom-color-input" id="customColorInput" value="${chosenColor}" title="自由に選ぶ">
         </div>
         <div class="modal-actions">
           <button class="cancel">キャンセル</button>
@@ -1190,15 +1253,22 @@
     document.body.appendChild(wrap);
     const nameInput = wrap.querySelector("#newUserName");
     const confirmBtn = wrap.querySelector("#confirmAdd");
+    const customInput = wrap.querySelector("#customColorInput");
     nameInput.addEventListener("input", ()=>{
       confirmBtn.disabled = nameInput.value.trim().length === 0;
     });
     wrap.querySelectorAll(".swatch").forEach(sw=>{
       sw.addEventListener("click", ()=>{
-        wrap.querySelectorAll(".swatch").forEach(s=>s.classList.remove("sel"));
+        wrap.querySelectorAll(".swatch, .custom-color-input").forEach(s=>s.classList.remove("sel"));
         sw.classList.add("sel");
         chosenColor = sw.dataset.color;
+        customInput.value = chosenColor;
       });
+    });
+    customInput.addEventListener("input", ()=>{
+      wrap.querySelectorAll(".swatch, .custom-color-input").forEach(s=>s.classList.remove("sel"));
+      customInput.classList.add("sel");
+      chosenColor = customInput.value;
     });
     wrap.querySelector(".cancel").onclick = ()=> wrap.remove();
     confirmBtn.onclick = ()=>{
