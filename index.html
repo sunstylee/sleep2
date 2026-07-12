@@ -13,6 +13,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --night-900:#12132b;
@@ -681,7 +684,25 @@
 
   const PALETTE = ["#f2a65a","#8f9bff","#7ed6a5","#f0745e","#ffd873","#c792ea"];
   const MAX_USERS = 5;
-  const STORAGE_KEY = "sleep-tracker-data";
+  // ── Firebase設定 ──────────────────────────────────────────────
+  // ★ Firebaseコンソールからコピーした値に書き換えてください ★
+  const FIREBASE_CONFIG = {
+    apiKey:            "AIzaSyA66BaPrl8zLBrV0UNwq1rx9EJS0PnunpM",
+    authDomain:        "nico-sleep-tracker.firebaseapp.com",
+    projectId:         "nico-sleep-tracker",
+    storageBucket:     "nico-sleep-tracker.firebasestorage.app",
+    messagingSenderId: "1088878445430",
+    appId:             "1:1088878445430:web:e0605b20e00235198d3057"
+  };
+  firebase.initializeApp(FIREBASE_CONFIG);
+  const db      = firebase.firestore();
+  const DOC_REF = db.collection("sleepTracker").doc("shared");
+  // オフライン時もキャッシュで動作するよう設定
+  db.enablePersistence().catch(()=>{});
+  // ──────────────────────────────────────────────────────────────
+
+  // 端末ごとの設定（選択中ユーザー・背景画像）はlocalStorageに保存
+  const LOCAL_PREFS_KEY = "sleep-tracker-prefs";
 
   let state = {
     users: [],
@@ -707,39 +728,61 @@
   }
 
   async function loadState(){
+    // 端末ローカルの設定を読み込む（選択中ユーザー・背景画像）
     try{
-      const raw = window.localStorage.getItem(STORAGE_KEY);
+      const raw = window.localStorage.getItem(LOCAL_PREFS_KEY);
       if(raw){
-        const parsed = JSON.parse(raw);
-        state = Object.assign(state, parsed);
+        const prefs = JSON.parse(raw);
+        if(prefs.activeUserId) state.activeUserId = prefs.activeUserId;
+        if(prefs.background !== undefined) state.background = prefs.background;
       }
-    }catch(e){
-      // no existing data yet, or storage unavailable
-    }
-    if(!state.users || state.users.length === 0){
-      state.users = [
-        {id: uid(), name:"わたし", color: PALETTE[0]}
-      ];
-    }
-    if(!state.activeUserId || !state.users.find(u=>u.id===state.activeUserId)){
-      state.activeUserId = state.users[0].id;
-    }
-    if(!state.sessions) state.sessions = [];
-    if(state.background === undefined) state.background = null;
-    loaded = true;
-    applyBackground();
-    render();
+    }catch(e){}
+
+    // Firebaseからリアルタイムでデータを受信（全端末に即時反映）
+    DOC_REF.onSnapshot((doc)=>{
+      if(doc.exists){
+        const data = doc.data();
+        state.users    = data.users    || [];
+        state.sessions = data.sessions || [];
+      } else {
+        // 初回起動時: デフォルトデータをFirebaseに作成
+        state.users    = [{id: uid(), name:"わたし", color: PALETTE[0]}];
+        state.sessions = [];
+        DOC_REF.set({ users: state.users, sessions: state.sessions });
+      }
+      if(!state.users || state.users.length === 0){
+        state.users = [{id: uid(), name:"わたし", color: PALETTE[0]}];
+      }
+      if(!state.activeUserId || !state.users.find(u=>u.id===state.activeUserId)){
+        state.activeUserId = state.users[0].id;
+      }
+      if(state.background === undefined) state.background = null;
+      loaded = true;
+      applyBackground();
+      render();
+    }, (err)=>{
+      console.error("Firebase接続エラー:", err);
+      showToast("接続に失敗しました。再読み込みをお試しください。");
+    });
   }
 
   async function saveState(){
+    // 共有データをFirebaseに保存（users, sessions → 全端末に反映）
     try{
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        users: state.users, sessions: state.sessions, activeUserId: state.activeUserId,
-        background: state.background
-      }));
+      await DOC_REF.set({
+        users:    state.users,
+        sessions: state.sessions
+      });
     }catch(e){
       showToast("保存に失敗しました");
     }
+    // 端末固有の設定をlocalStorageに保存（activeUserId, background）
+    try{
+      window.localStorage.setItem(LOCAL_PREFS_KEY, JSON.stringify({
+        activeUserId: state.activeUserId,
+        background:   state.background
+      }));
+    }catch(e){}
   }
 
   function applyBackground(){
