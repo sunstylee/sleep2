@@ -660,6 +660,121 @@
   .empty-state .icon{ font-size:40px; margin-bottom:10px; }
   .empty-state h3{ font-family:"Zen Maru Gothic",sans-serif; color:var(--moon-100); margin:0 0 6px; }
   .empty-state p{ font-size:13px; margin:0; color:var(--text-dimmer); }
+
+  /* ═══════════════════════════════════════
+     レスポンシブ対応
+  ═══════════════════════════════════════ */
+
+  /* スマホ横向き（高さ500px未満の横長画面） */
+  @media (orientation:landscape) and (max-height:500px){
+    header.top{ padding:8px 24px 4px; }
+    header.top .eyebrow{ font-size:11px; }
+    header.top h1{ font-size:20px; margin:2px 0 0; }
+    main{ padding:6px 20px 72px; gap:8px; }
+    .arc-card{ padding:12px 18px 12px; }
+    .arc-card .status-label{ font-size:11px; }
+    .arc-card .status-value{ font-size:17px; margin-bottom:8px; }
+    .arc-wrap{ height:90px; }
+    .arc-center-text .dur{ font-size:22px; }
+    .main-btn{ margin-top:10px; padding:11px 0; font-size:14px; }
+    .mini-actions{ margin-top:6px; }
+    .section-title{ font-size:13px; margin:2px 2px 0; }
+    nav.bottom{ padding:4px 10px calc(4px + env(safe-area-inset-bottom)); }
+    nav.bottom button{ gap:2px; font-size:10px; padding:4px 0; }
+    nav.bottom button .icon{ font-size:17px; }
+    .history-card{ padding:10px 14px 8px; gap:7px; }
+    .admin-card{ padding:9px 12px; }
+  }
+
+  /* タブレット縦向き（幅600px以上・縦向き） */
+  @media (min-width:600px) and (orientation:portrait){
+    #app{ max-width:640px; }
+    .stars{ max-width:640px; }
+    nav.bottom{ max-width:640px; }
+    header.top{ padding:36px 36px 16px; }
+    header.top h1{ font-size:30px; }
+    main{ padding:12px 32px 130px; gap:20px; }
+    .arc-card{ padding:30px 28px 24px; }
+    .arc-wrap{ height:170px; }
+    .arc-center-text .dur{ font-size:38px; }
+    .main-btn{ padding:20px 0; font-size:18px; }
+    .user-chip{ font-size:15px; padding:10px 18px 10px 12px; }
+    .user-chip .dot{ width:26px; height:26px; font-size:13px; }
+    .section-title{ font-size:17px; }
+    .history-card{ padding:18px 20px 14px; }
+    .admin-card{ padding:14px 18px; }
+    .admin-card input{ font-size:16px; }
+  }
+
+  /* タブレット横向き（幅900px以上） */
+  @media (min-width:900px){
+    body{ align-items:flex-start; }
+
+    #app{
+      max-width:1100px;
+      min-height:100vh;
+      display:grid;
+      grid-template-columns:210px 1fr;
+      grid-template-rows:auto 1fr;
+      grid-template-areas:"header header" "sidenav main";
+    }
+    .stars{ max-width:100%; }
+
+    header.top{
+      grid-area:header;
+      padding:20px 36px 16px;
+      border-bottom:1px solid var(--night-700);
+      display:flex;
+      flex-direction:row;
+      align-items:center;
+      gap:16px;
+    }
+    header.top .eyebrow{ margin:0; font-size:12px; }
+    header.top h1{ margin:0; font-size:24px; }
+
+    main#main{
+      grid-area:main;
+      padding:24px 40px 40px;
+      overflow-y:auto;
+      max-height:calc(100vh - 68px);
+    }
+
+    nav.bottom{
+      grid-area:sidenav;
+      position:static;
+      max-width:210px;
+      flex-direction:column;
+      align-items:stretch;
+      justify-content:flex-start;
+      padding:20px 12px;
+      border-top:none;
+      border-right:1px solid var(--night-700);
+      background:rgba(18,19,43,.6);
+      min-height:calc(100vh - 68px);
+    }
+    nav.bottom button{
+      flex-direction:row;
+      justify-content:flex-start;
+      gap:12px;
+      padding:13px 16px;
+      border-radius:var(--radius-sm);
+      font-size:14px;
+    }
+    nav.bottom button .icon{ font-size:22px; }
+    nav.bottom button.active{ background:var(--night-700); }
+
+    .toast{ bottom:32px; }
+    .modal-backdrop{ align-items:center; }
+    .modal-sheet{ border-radius:24px; max-width:480px; }
+
+    .arc-card{ padding:28px 28px 22px; }
+    .arc-wrap{ height:170px; }
+    .arc-center-text .dur{ font-size:38px; }
+    .section-title{ font-size:17px; }
+    .history-card{ padding:18px 20px 14px; }
+    .admin-card{ padding:14px 18px; }
+    .user-chip{ font-size:15px; }
+  }
 </style>
 </head>
 <body>
@@ -685,15 +800,6 @@
   const PALETTE = ["#f2a65a","#8f9bff","#7ed6a5","#f0745e","#ffd873","#c792ea"];
   const MAX_USERS = 5;
   // ── Firebase設定 ──────────────────────────────────────────────
-  // ★ Firebaseコンソールからコピーした値に書き換えてください ★
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-};
-  
-  
-  
-  
-  
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyA66BaPrl8zLBrV0UNwq1rx9EJS0PnunpM",
   authDomain: "nico-sleep-tracker.firebaseapp.com",
