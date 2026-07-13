@@ -661,6 +661,33 @@
   .empty-state h3{ font-family:"Zen Maru Gothic",sans-serif; color:var(--moon-100); margin:0 0 6px; }
   .empty-state p{ font-size:13px; margin:0; color:var(--text-dimmer); }
 
+  /* 起きている時間カード */
+  .awake-card{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    background:rgba(247,192,138,.1); border:1px solid rgba(247,192,138,.22);
+    border-radius:var(--radius-sm); padding:13px 16px;
+    font-size:14px; color:var(--dawn-300); margin-top:2px;
+  }
+  .awake-card b{ color:var(--dawn-400); font-size:17px; }
+
+  /* バージョンカード */
+  .version-card{
+    background:rgba(26,28,61,.6); border:1px solid rgba(38,42,92,.8);
+    border-radius:var(--radius-sm); padding:14px 18px;
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:14px; color:var(--text-dim); margin-bottom:4px;
+  }
+  .version-num{
+    font-family:"Zen Maru Gothic",sans-serif; font-size:22px;
+    font-weight:700; color:var(--moon-100); letter-spacing:1px;
+  }
+
+  /* グラフカード */
+  .graph-card{
+    background:rgba(26,28,61,.65); border:1px solid rgba(38,42,92,.8);
+    border-radius:var(--radius-md); padding:14px 10px 10px; overflow:hidden;
+  }
+
   /* ═══════════════════════════════════════
      レスポンシブ対応
   ═══════════════════════════════════════ */
@@ -1078,7 +1105,7 @@ const FIREBASE_CONFIG = {
     const open = activeUser ? getOpenSession(activeUser.id) : null;
     const last = activeUser && !open ? userSessions(activeUser.id)[0] : null;
 
-    let arcInner, statusLabel, statusValue, timesRow, btnHtml, miniActions = "";
+    let arcInner, statusLabel, statusValue, timesRow, btnHtml, miniActions = "", awakeCard = "";
 
     if(open){
       statusLabel = "就寝中";
@@ -1103,6 +1130,9 @@ const FIREBASE_CONFIG = {
       miniActions = `<div class="mini-actions">
         <button class="mini-link" id="editLastBtn">✏️ この記録を修正</button>
       </div>`;
+      const awakeMs = Date.now() - new Date(last.wakeAt).getTime();
+      const {h:ah, m:am} = fmtDur(awakeMs);
+      awakeCard = `<div class="awake-card">☀️ 起きてから <b>${ah}時間${am}分</b></div>`;
     } else {
       statusLabel = "はじめての記録";
       statusValue = activeUser ? activeUser.name + "さん、おやすみの記録をつけましょう" : "ユーザーを選んでください";
@@ -1123,6 +1153,7 @@ const FIREBASE_CONFIG = {
         ${btnHtml}
         ${miniActions}
       </div>
+      ${awakeCard}
     `;
 
     document.querySelectorAll("#userRow .user-chip").forEach(chip=>{
@@ -1175,9 +1206,98 @@ const FIREBASE_CONFIG = {
       });
     }
 
-    if(open && !renderRecord._timer){
-      renderRecord._timer = setInterval(()=>{ if(tab==="record") render(); }, 60000);
+    if(open || last){
+      if(!renderRecord._timer){
+        renderRecord._timer = setInterval(()=>{ if(tab==="record") render(); }, 60000);
+      }
+    } else {
+      clearInterval(renderRecord._timer);
+      renderRecord._timer = null;
     }
+  }
+
+  function renderSleepGraph(){
+    const SVG_W=360, SVG_H=205, ML=34, MT=22, MB=30, MR=6;
+    const cW=SVG_W-ML-MR, cH=SVG_H-MT-MB, maxH=12;
+
+    const today=new Date(); today.setHours(0,0,0,0);
+    const days=[];
+    for(let i=6;i>=0;i--){ const d=new Date(today); d.setDate(d.getDate()-i); days.push(d); }
+
+    const nU=state.users.length||1;
+    const dayW=cW/7;
+    const barW=Math.max(4, Math.floor((dayW*0.72)/nU));
+    const barGap=2;
+    const DOW=["日","月","火","水","木","金","土"];
+    let svg="";
+
+    // Y軸グリッド＋ラベル
+    [0,3,6,9,12].forEach(h=>{
+      const y=(MT+cH-(h/maxH)*cH).toFixed(1);
+      svg+=`<line x1="${ML}" y1="${y}" x2="${ML+cW}" y2="${y}" stroke="#262a5c" stroke-width="${h===0?1.5:0.6}" stroke-dasharray="${h===0?'':'4,3'}"/>`;
+      svg+=`<text x="${ML-3}" y="${(parseFloat(y)+3.5).toFixed(1)}" font-size="8" fill="#6b6ea0" text-anchor="end">${h}h</text>`;
+    });
+
+    // バー＋X軸ラベル
+    days.forEach((day,di)=>{
+      const nextDay=new Date(day); nextDay.setDate(nextDay.getDate()+1);
+      const isToday=day.getTime()===today.getTime();
+      const cx=ML+di*dayW+dayW/2;
+      const totalBW=nU*barW+(nU-1)*barGap;
+      const startX=cx-totalBW/2;
+
+      const lbl=`${day.getMonth()+1}/${day.getDate()}`;
+      const dow=DOW[day.getDay()];
+      svg+=`<text x="${cx.toFixed(1)}" y="${(MT+cH+14).toFixed(1)}" font-size="8.5" fill="${isToday?'#f2a65a':'#9497c9'}" text-anchor="middle">${lbl}</text>`;
+      svg+=`<text x="${cx.toFixed(1)}" y="${(MT+cH+25).toFixed(1)}" font-size="7.5" fill="${isToday?'#e88a3a':'#6b6ea0'}" text-anchor="middle">${dow}</text>`;
+
+      state.users.forEach((u,ui)=>{
+        const ss=state.sessions.filter(s=>
+          s.userId===u.id && s.wakeAt &&
+          new Date(s.bedAt)>=day && new Date(s.bedAt)<nextDay
+        );
+        const totalMs=ss.reduce((sum,s)=>sum+(new Date(s.wakeAt)-new Date(s.bedAt)),0);
+        const hours=Math.min(totalMs/3600000, maxH);
+        const bx=(startX+ui*(barW+barGap)).toFixed(1);
+
+        if(hours>0.05){
+          const barH=((hours/maxH)*cH).toFixed(1);
+          const by=(MT+cH-parseFloat(barH)).toFixed(1);
+          svg+=`<rect x="${bx}" y="${by}" width="${barW}" height="${barH}" rx="2" fill="${u.color}" opacity="0.88"/>`;
+          if(parseFloat(barH)>15 && barW>10){
+            svg+=`<text x="${(parseFloat(bx)+barW/2).toFixed(1)}" y="${(parseFloat(by)+parseFloat(barH)-3).toFixed(1)}" font-size="7" fill="rgba(255,255,255,0.85)" text-anchor="middle">${hours.toFixed(1)}</text>`;
+          }
+        } else {
+          svg+=`<rect x="${bx}" y="${(MT+cH-2).toFixed(1)}" width="${barW}" height="2" rx="1" fill="${u.color}" opacity="0.2"/>`;
+        }
+      });
+    });
+
+    // 凡例（ユーザーカラー）
+    const legSp=Math.min(72,(SVG_W-10)/nU);
+    state.users.forEach((u,i)=>{
+      const lx=6+i*legSp;
+      svg+=`<rect x="${lx}" y="5" width="9" height="9" rx="2" fill="${u.color}"/>`;
+      svg+=`<text x="${lx+12}" y="13.5" font-size="9" fill="#9497c9">${escapeHtml(u.name).slice(0,6)}</text>`;
+    });
+
+    return `
+      <div class="section-title">日別睡眠グラフ <span class="hint">直近7日</span></div>
+      <div class="graph-card">
+        <svg viewBox="0 0 ${SVG_W} ${SVG_H}" width="100%" style="display:block;">${svg}</svg>
+      </div>`;
+  }
+
+  async function fetchCommitCount(){
+    try{
+      const res=await fetch("https://api.github.com/repos/sunstylee/sleep2/commits?per_page=1");
+      if(!res.ok) return null;
+      const link=res.headers.get("Link")||"";
+      const m=link.match(/page=(\d+)>;\s*rel="last"/);
+      if(m) return parseInt(m[1]);
+      const json=await res.json();
+      return Array.isArray(json)?json.length:null;
+    }catch(e){ return null; }
   }
 
   function renderHistory(){
@@ -1221,7 +1341,8 @@ const FIREBASE_CONFIG = {
 
     $main.innerHTML = `
       ${userChipsHtml()}
-      <div class="section-title">${activeUser ? escapeHtml(activeUser.name) + "さんの記録" : "記録"} <span class="hint">${sessions.length}件</span></div>
+      ${renderSleepGraph()}
+      <div class="section-title" style="margin-top:14px;">${activeUser ? escapeHtml(activeUser.name) + "さんの記録" : "記録"} <span class="hint">${sessions.length}件</span></div>
       <div class="history-list">${listHtml}</div>
     `;
 
@@ -1275,7 +1396,18 @@ const FIREBASE_CONFIG = {
         <input type="file" id="bgFileInput" accept="image/*" style="display:none;">
         <div class="bg-note">選んだ写真がアプリ全体の背景になります</div>
       </div>
+
+      <div class="section-title" style="margin-top:8px;">アプリ情報</div>
+      <div class="version-card">
+        <span>バージョン</span>
+        <span class="version-num" id="appVersionNum">読込中…</span>
+      </div>
     `;
+
+    fetchCommitCount().then(count=>{
+      const el=document.getElementById("appVersionNum");
+      if(el) el.textContent=count!==null ? count+".00" : "---";
+    });
 
     document.querySelectorAll('#adminList input[type=text]').forEach(inp=>{
       inp.addEventListener("change", ()=>{
